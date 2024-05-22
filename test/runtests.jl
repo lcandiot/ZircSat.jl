@@ -1,7 +1,7 @@
 using ZircSat
 using Test
 
-data_path = "/Users/lcandiot/Developer/ZircSat/data/ZircSat_test.csv"
+data_path = "/data/ZircSat_test.csv"
 db = "ig"
 sys_in = "wt"
 delim = ','
