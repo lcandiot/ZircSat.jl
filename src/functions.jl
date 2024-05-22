@@ -2,7 +2,7 @@
 using MAGEMin_C, Printf, DelimitedFiles, DataFramesMeta, CSV
 
 # Liquidus temperature calculation using MAGEMin
-function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::String, sys_in::String, delim::Char, header::Bool)
+function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::String, sys_in::String, delim::Char, header::Bool, write_csv::Bool)
 
     # Read in the CSV file
     data, header = readdlm(data_path, delim, header=header)
@@ -109,9 +109,11 @@ function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::S
     end
 
     # Add liquidus T to df and save as new .csv
-    insertcols!(df, "T_liq [C]" => T_liquidus)
-    data_path_new = replace(data_path, ".csv" => "_Tliq.csv")
-    CSV.write(data_path_new, df)
+    if write_csv
+        insertcols!(df, "T_liq [C]" => T_liquidus)
+        data_path_new = replace(data_path, ".csv" => "_Tliq.csv")
+        CSV.write(data_path_new, df)
+    end
 
     # Return
     return T_liquidus
