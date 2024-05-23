@@ -120,5 +120,128 @@ function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::S
 
 end
 
+# Zircon saturation temperature
+function calculate_ZircSat_temperature(; data_path::String)
+    # Define elemental optical basicities
+    ElementalOpt = Dict("K2O" => 1.4,
+    "Na2O" => 1.15,
+    "CaO" => 1.0,
+    "MgO" => 0.78,
+    "MnO" => 1.0,
+    "FeO" => 1.0,
+    "Al2O3" => 0.60,
+    "SiO2" => 0.48,
+    "P2O5" => 0.33)
+
+    MolecularMass = Dict("SiO2"  => 60.084,
+                         "K2O"   => 94.196,
+                         "CaO"   => 56.077,
+                         "MgO"   => 40.304,
+                         "MnO"   => 70.937,
+                         "FeO"   => 71.844,
+                         "Al2O3" => 101.961,
+                         "H2O"   => 18.015
+    )
+
+    df = CSV.read(data_path, DataFrame)
+
+    # Pressure in GPa
+    P = df[:, "P [kbar]"] ./ 10.0
+    aH2O = 0.0
+    # Calculate optical basicity and xH2O
+    opt  = calculate_optical_basicity(; df, MolecularMass, ElementalOpt)
+    xH2O = calculate_water_content(; df, MolecularMass, aH2O)
+    
+    T_sat   = @. -5790 / (log10(df.Zr) - 0.96 + 1.28 * P - 12.39 * opt - 0.83 * xH2O - 2.06 * P * opt)
+    T_sat .-= 273.15
+    
+    # Return
+    return T_sat
+end
+
+# Optical basicity
+function calculate_optical_basicity(; df::DataFrame, MolecularMass::Dict, ElementalOpt::Dict)
+    # Convert Fe2O3 to FeO if present
+    if hasproperty(df, "Fe2O3")
+        if hasproperty(df, "FeO")
+            df[!, "FeO"] .+= df[!, "Fe2O3"] ./ 1.1111
+        else
+            df[!, "FeO"]  .= df[!, "Fe2O3"] ./ 1.1111
+        end
+    end
+
+    # Calculate molar abundances
+    SiO2_mol = df.SiO2 ./ MolecularMass["SiO2"]
+    K2O_mol = df.K2O ./ MolecularMass["K2O"]
+    CaO_mol = df.CaO ./ MolecularMass["CaO"]
+    MgO_mol = df.MgO ./ MolecularMass["MgO"]
+    MnO_mol = df.MnO ./ MolecularMass["MnO"]
+    FeO_mol = df.FeO ./ MolecularMass["FeO"]
+    Al2O3_mol = df.Al2O3 ./ MolecularMass["Al2O3"]
+    
+    total_mol = (SiO2_mol + K2O_mol + CaO_mol + MgO_mol +
+                 MnO_mol + FeO_mol + Al2O3_mol)
+    
+    # Calculate optical basicity
+    term1 = (
+        ((SiO2_mol  ./ total_mol) .* 2.0 .* ElementalOpt["SiO2"]) .+
+        ((K2O_mol   ./ total_mol) .* 1.0 .* ElementalOpt["K2O"])  .+
+        ((CaO_mol   ./ total_mol) .* 1.0 .* ElementalOpt["CaO"])  .+
+        ((MgO_mol   ./ total_mol) .* 1.0 .* ElementalOpt["MgO"])  .+
+        ((MnO_mol   ./ total_mol) .* 1.0 .* ElementalOpt["MnO"])  .+
+        ((FeO_mol   ./ total_mol) .* 1.0 .* ElementalOpt["FeO"])  .+
+        ((Al2O3_mol ./ total_mol) .* 3.0 .* ElementalOpt["Al2O3"])
+    )
+    
+    term2 = (
+        ((SiO2_mol  ./ total_mol) .* 2.0) .+
+        ((K2O_mol   ./ total_mol) .* 1.0) .+
+        ((CaO_mol   ./ total_mol) .* 1.0) .+
+        ((MgO_mol   ./ total_mol) .* 1.0) .+
+        ((MnO_mol   ./ total_mol) .* 1.0) .+
+        ((FeO_mol   ./ total_mol) .* 1.0) .+
+        ((Al2O3_mol ./ total_mol) .* 3.0)
+    )
+    
+    opt_bas = term1 ./ term2
+    
+    return opt_bas
+end
+
+# Water content based on water activity
+function calculate_water_content(; df::DataFrame, MolecularMass::Dict, aH2O::Float64)
+    # Initialize H2O
+    H2O_array = fill(aH2O, size(df)[1])
+    
+    # Convert Fe2O3 to FeO if present
+    if hasproperty(df, "Fe2O3")
+        if hasproperty(df, "FeO")
+            df[!, "FeO"] .+= df[!, "Fe2O3"] ./ 1.1111
+        else
+            df[!, "FeO"]  .= df[!, "Fe2O3"] ./ 1.1111
+        end
+    end
+    println(names(df))
+    # Calculate molar weights
+    SiO2_mol  = df.SiO2   ./ MolecularMass["SiO2"]
+    K2O_mol   = df.K2O    ./ MolecularMass["K2O"]
+    CaO_mol   = df.CaO    ./ MolecularMass["CaO"]
+    MgO_mol   = df.MgO    ./ MolecularMass["MgO"]
+    MnO_mol   = df.MnO    ./ MolecularMass["MnO"]
+    FeO_mol   = df.FeO    ./ MolecularMass["FeO"]
+    Al2O3_mol = df.Al2O3  ./ MolecularMass["Al2O3"]
+    H2O_mol   = H2O_array ./ MolecularMass["H2O"]
+
+    total_mol = (SiO2_mol + K2O_mol + CaO_mol + MgO_mol +
+                 MnO_mol + FeO_mol + Al2O3_mol + H2O_mol)
+    
+    xH2O = H2O_mol ./ total_mol
+    
+    return xH2O
+end
+
 # Export
 export calculate_liquidus_temperature
+export calculate_optical_basicity
+export calculate_ZircSat_temperature
+export calculate_water_content
