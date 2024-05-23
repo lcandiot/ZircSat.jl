@@ -12,28 +12,60 @@ This package is built on [MAGEMin](https://github.com/ComputationalThermodynamic
 
 First, install Julia on your system following the official [Julia download instructions](https://julialang.org/downloads/) for your system. Upon successful installation of Julia, execute the following steps to install and use ZircSat:
 
-1. Open a terminal and clone this repository to any destination on your machine:
+1. Open a terminal and clone this repository to any destination on your machine
 
    ```
    git clone https://github.com/lcandiot/ZircSat.jl.git
    ```
-2. In your local repositories top level, open a Julia REPL by typing
+2. Step into the newly created repository
+
+   ```
+   cd ZircSat.jl
+   ```
+3. Create a personal working directory named `/USER`
+
+   ```
+   mkdir -p USER
+   ```
+4. Copy the `/examples/ex_calculate_Tliq_Tsat.jl` and ` /data/ZircSat_test_MarxerUlmer2019.csv` files into your newly generated  `/USER `directory. Rename `/examples/ex_calculate_Tliq_Tsat.jl` to `my_Tliq_Tsat_calculator.jl` and `/data/ZircSat_test_MarxerUlmer2019.csv` to `/data/my_data.csv`
+
+   ```
+   cp -r examples/ex_calculate_Tliq_Tsat.jl data/ZircSat_test_MarxerUlmer2019.csv USER/
+   mv USER/ex_calculate_Tliq_Tsat.jl USER/my_Tliq_Tsat_calculator.jl
+   mv USER/ZircSat_test_MarxerUlmer2019.csv USER/my_data.csv
+   ```
+5. Start the Julia REPL
 
    ```
    julia --project
    ```
-3. Test if your installation is working. Start the package mode by typing `]` followed by `test`. You can exit the package mode by hitting backspace/delete on your keyboard.
-4. In the [examples](https://github.com/lcandiot/ZircSat.jl/tree/main/examples) directory you can find scripts that illustrate how to use this package. See how to calculate the liquidus temperature by copy-pasting
+6. To test if the installation works activate the package mode and test the ZircSat package
 
    ```
-   include("./examples/ex_calculate_Tliq_Tsat.jl")
+   ]
+   test
    ```
+7. Exit the package environment (hitting backspace on your keyboard).
+8. Open `/USER/my_Tliq_Tsat_calculator.jl` with a code editor of your choice and modifiy the data path line
 
-   in your REPL.
+   ```
+   data_path = "./USER/my_data.csv"
+   ```
+9. Run `/USER/my_Tliq_Tsat_calculator.jl` by entering the following command in the Julia REPL
+
+   ```
+   include("USER/my_Tliq_Tsat_calculator.jl")
+   ```
+10. Congratulations! You can now modify these two files according to your needs and add your own data to `/USER/my_data.csv`
+
+
+```
+
+```
 
 ## Input / Output
 
-The `calculate_liquidus_temperature()` function expects a data table stored as `.csv` file. This table should contain the test pressure in kbar as well as the major oxides `SiO2-Al2O3-CaO-MgO-FeO-Fe2O3-TiO2-K2O-Na2O-Cr2O3-H2O` which are required by MAGEMins igneous database. For now only this database has been tested. While the order of the columns does not matter, the package is case sensitive. It is therefore recommended to use the [ZircSat_test_MarxerUlmer2019.csv](https://github.com/lcandiot/ZircSat.jl/tree/main/data/ZircSat_test_MarxerUlmer2019.csv) as a template. Copy this file to `/USER` and populate it with your data.
+The `calculate_liquidus_temperature()` function expects a data table stored as `.csv` file. This table should contain the test pressure in kbar as well as the major oxides `SiO2-Al2O3-CaO-MgO-FeO-Fe2O3-TiO2-K2O-Na2O-Cr2O3-H2O` which are required by MAGEMins igneous database. For now only this database has been tested. While the order of the columns does not matter, the package is case sensitive. It is therefore recommended to use the [ZircSat_test_MarxerUlmer2019.csv](https://github.com/lcandiot/ZircSat.jl/tree/main/data/ZircSat_test_MarxerUlmer2019.csv) as a template. Further, the Zirconium concentration in units ppm is required as `Zr` column in the data file.
 
 Upon calculation of the liquidus temperature, a new `.csv` file will be written to the same location as the input file. The new file contains the original data plus an additional column in which the calculated liquidus temperature is stored. Although the precision of this prediction is $\approx$ 1 °C for the test cases, the accuracy of the predicted liquidus temperature is dependent on the accuracy of MAGEMin predicting the stable mineral phases correctly.
 
