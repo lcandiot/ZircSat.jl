@@ -32,3 +32,6 @@ First, install Julia on your system following the official [Julia download instr
 The `calculate_liquidus_temperature()` function expects a data table stored as `.csv` file. This table should contain the test pressure in kbar as well as the major oxides `SiO2-Al2O3-CaO-MgO-FeO-Fe2O3-TiO2-K2O-Na2O-Cr2O3-H2O` which are required by MAGEMins igneous database. For now only this database has been tested.
 
 Upon calculation of the liquidus temperature, a new `.csv` file will be written to the same location as the input file. The new file contains the original data plus an additional column in which the calculated liquidus temperature is stored. Although the precision of this prediction is $\approx$ 1 °C for the test cases, the accuracy of the predicted liquidus temperature is dependent on the accuracy of MAGEMin predicting the stable mineral phases correctly.
+
+## Working with this repository
+It is recommended to generate a `/USER` directory in the top level of this repository and store or files which are not meant to be published there. This directory should also be the place to work from and run scripts. Feel free to use the [examples](https://github.com/lcandiot/ZircSat.jl/tree/main/examples) as starting point for your own routines.
