@@ -2,15 +2,23 @@
 using MAGEMin_C, Printf, DelimitedFiles, DataFramesMeta, CSV
 
 # Liquidus temperature calculation using MAGEMin
-function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::String, sys_in::String, delim::Char, header::Bool, write_csv::Bool)
+function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::String, sys_in::String, delim::Char, header::Bool)
 
     # Read in the CSV file
     data, header = readdlm(data_path, delim, header=header)
     df = DataFrame(data, vec(header))
 
+    # Check if FeO is total iron
+    idFe2O3 = findfirst(x -> x == "Fe2O3", names(df))
+
     # Intitialize
-    # db         = "ig"                                   # Database selection: ig = igneous (Holland et al., 2018)
-    Xoxides    = ["SiO2"; "Al2O3"; "CaO"; "MgO"; "FeO"; "Fe2O3"; "K2O"; "Na2O"; "TiO2"; "Cr2O3"; "H2O"]
+    if isnothing(idFe2O3)   # Check if FeO is total iron
+        data = Initialize_MAGEMin(db, verbose=false, buffer="qfm")
+        Xoxides    = ["SiO2"; "Al2O3"; "CaO"; "MgO"; "FeO"; "K2O"; "Na2O"; "TiO2"; "Cr2O3"; "H2O"]
+    else
+        data = Initialize_MAGEMin(db, verbose=false)
+        Xoxides    = ["SiO2"; "Al2O3"; "CaO"; "MgO"; "FeO"; "Fe2O3"; "K2O"; "Na2O"; "TiO2"; "Cr2O3"; "H2O"]
+    end
     X          = Vector{Float64}(undef, length(Xoxides))
     T_liquidus = Vector{Float64}(undef, length(df[:,1]))
 
@@ -28,7 +36,6 @@ function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::S
         P    = df[iData, 1    ]                                    # Pressure [kbar]
         X   .= [df[iData, iOx] for iOx in Xoxides] # delta = 0
         T    = copy(T_0)
-        data = Initialize_MAGEMin(db, verbose=false, buffer="qfm");
 
         # Monitor
         println("----------------")
@@ -41,13 +48,16 @@ function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::S
         for iters in 1:max_iter
                     
             # Determine melt fraction at current T
-            out = single_point_minimization(P, T, data, X=X, Xoxides=Xoxides, sys_in=sys_in, B=2.0)
+            if isnothing(idFe2O3)   # Check if FeO is total iron
+                out = single_point_minimization(P, T, data, X=X, Xoxides=Xoxides, sys_in=sys_in, B=0.0)
+            else
+                out = single_point_minimization(P, T, data, X=X, Xoxides=Xoxides, sys_in=sys_in)
+            end
 
             # Find liq string in MAGEMin phase output and skip iteration if we are still below the solidus
             id_liq = findfirst(x-> x == "liq", out.ph)
             id_fl  = findfirst(x-> x == "fl",  out.ph)
             if isnothing(id_liq)
-                # println("Current T < T_solidus. Increasing T by 50 °C")
                 T += 10.0
                 continue
             elseif out.ph_frac_wt[id_liq] < 0.7
@@ -75,7 +85,11 @@ function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::S
 
             # Calculate liquid fraction at perturbed T (necessary for numerical derivative)
             T_p        = T + T * 1e-4
-            out_pert   = single_point_minimization(P, T_p, data, X=X, Xoxides=Xoxides, sys_in=sys_in, B=2.0)
+            if isnothing(idFe2O3)   # Check if FeO is total iron
+                out_pert   = single_point_minimization(P, T_p, data, X=X, Xoxides=Xoxides, sys_in=sys_in, B=2.0)
+            else
+                out_pert   = single_point_minimization(P, T_p, data, X=X, Xoxides=Xoxides, sys_in=sys_in)
+            end
             id_liq     = findfirst(x-> x == "liq", out_pert.ph)
             id_fl      = findfirst(x-> x == "fl", out_pert.ph)
             
@@ -108,13 +122,6 @@ function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::S
 
     end
 
-    # Add liquidus T to df and save as new .csv
-    if write_csv
-        insertcols!(df, "T_liq [C]" => T_liquidus)
-        data_path_new = replace(data_path, ".csv" => "_Tliq.csv")
-        CSV.write(data_path_new, df)
-    end
-
     # Return
     return T_liquidus
 
@@ -145,16 +152,25 @@ function calculate_ZircSat_temperature(; data_path::String)
 
     df = CSV.read(data_path, DataFrame)
 
+    # Some sanity checks
+    minZr = minimum(df.Zr)
+    maxZr = maximum(df.Zr)
+    if minZr < 10.0 || maxZr > 1000.0
+        error("Zirconium content is out of bounds. Please, double check your data input.")
+    end
+
     # Pressure in GPa
-    P = df[:, "P [kbar]"] ./ 10.0
-    aH2O = 0.0
+    P    = df[:, "P [kbar]"] ./ 10.0
+
     # Calculate optical basicity and xH2O
     opt  = calculate_optical_basicity(; df, MolecularMass, ElementalOpt)
-    xH2O = calculate_water_content(; df, MolecularMass, aH2O)
+    xH2O = calculate_water_molfrac(; df, MolecularMass)
     
-    T_sat   = @. -5790 / (log10(df.Zr) - 0.96 + 1.28 * P - 12.39 * opt - 0.83 * xH2O - 2.06 * P * opt)
+    T_sat   = @. -5790.0 / (log10(df.Zr) - 0.96 + 1.28 * P - 12.39 * opt - 0.83 * xH2O - 2.06 * P * opt)
     T_sat .-= 273.15
-    
+
+    println("T_sat = $T_sat")
+
     # Return
     return T_sat
 end
@@ -209,9 +225,7 @@ function calculate_optical_basicity(; df::DataFrame, MolecularMass::Dict, Elemen
 end
 
 # Water content based on water activity
-function calculate_water_content(; df::DataFrame, MolecularMass::Dict, aH2O::Float64)
-    # Initialize H2O
-    H2O_array = fill(aH2O, size(df)[1])
+function calculate_water_molfrac(; df::DataFrame, MolecularMass::Dict)
     
     # Convert Fe2O3 to FeO if present
     if hasproperty(df, "Fe2O3")
@@ -221,16 +235,16 @@ function calculate_water_content(; df::DataFrame, MolecularMass::Dict, aH2O::Flo
             df[!, "FeO"]  .= df[!, "Fe2O3"] ./ 1.1111
         end
     end
-    println(names(df))
+
     # Calculate molar weights
-    SiO2_mol  = df.SiO2   ./ MolecularMass["SiO2"]
-    K2O_mol   = df.K2O    ./ MolecularMass["K2O"]
-    CaO_mol   = df.CaO    ./ MolecularMass["CaO"]
-    MgO_mol   = df.MgO    ./ MolecularMass["MgO"]
-    MnO_mol   = df.MnO    ./ MolecularMass["MnO"]
-    FeO_mol   = df.FeO    ./ MolecularMass["FeO"]
-    Al2O3_mol = df.Al2O3  ./ MolecularMass["Al2O3"]
-    H2O_mol   = H2O_array ./ MolecularMass["H2O"]
+    SiO2_mol  = df.SiO2  ./ MolecularMass["SiO2"]
+    K2O_mol   = df.K2O   ./ MolecularMass["K2O"]
+    CaO_mol   = df.CaO   ./ MolecularMass["CaO"]
+    MgO_mol   = df.MgO   ./ MolecularMass["MgO"]
+    MnO_mol   = df.MnO   ./ MolecularMass["MnO"]
+    FeO_mol   = df.FeO   ./ MolecularMass["FeO"]
+    Al2O3_mol = df.Al2O3 ./ MolecularMass["Al2O3"]
+    H2O_mol   = df.H2O   ./ MolecularMass["H2O"]
 
     total_mol = (SiO2_mol + K2O_mol + CaO_mol + MgO_mol +
                  MnO_mol + FeO_mol + Al2O3_mol + H2O_mol)
@@ -244,4 +258,4 @@ end
 export calculate_liquidus_temperature
 export calculate_optical_basicity
 export calculate_ZircSat_temperature
-export calculate_water_content
+export calculate_water_molfrac

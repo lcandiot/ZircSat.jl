@@ -1,6 +1,6 @@
 using ZircSat
 
-data_path = "/Users/lcandiot/Developer/MeltMigration_MagmaticSystems/data/experiments/ZircSat_test.csv"
+data_path = "/Users/lcandiot/Developer/ZircSat/data/ZircSat_test_Tliq_orig.csv"
 db = "ig"
 sys_in = "wt"
 delim = ','
