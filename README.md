@@ -59,10 +59,6 @@ First, install Julia on your system following the official [Julia download instr
 10. Congratulations! You can now modify these two files according to your needs and add your own data to `/USER/my_data.csv`
 
 
-```
-
-```
-
 ## Input / Output
 
 The `calculate_liquidus_temperature()` function expects a data table stored as `.csv` file. This table should contain the test pressure in kbar as well as the major oxides `SiO2-Al2O3-CaO-MgO-FeO-Fe2O3-TiO2-K2O-Na2O-Cr2O3-H2O` which are required by MAGEMins igneous database. For now only this database has been tested. While the order of the columns does not matter, the package is case sensitive. It is therefore recommended to use the [ZircSat_test_MarxerUlmer2019.csv](https://github.com/lcandiot/ZircSat.jl/tree/main/data/ZircSat_test_MarxerUlmer2019.csv) as a template. Further, the Zirconium concentration in units ppm is required as `Zr` column in the data file.
