@@ -2,15 +2,17 @@
 
 [![Build Status](https://github.com/lcandiot/ZircSat.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/lcandiot/ZircSat.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-Calculate the liquidus temperature and estimate the Zircon saturation temperature based on thermodynamic models for arc magmas.
+Calculate the liquidus temperature and estimate the Zircon saturation temperature based on thermodynamic models for silicate magmas.
 
 🚧 Note: this is a preliminary version. 🚧
 
-This package is built on [MAGEMin](https://github.com/ComputationalThermodynamics/MAGEMin), a Gibbs energy minimization tool. Calculation of the liquidus temperature, i.e. the temperature at which the solid fraction is near 0, is performed using Newton-Raphson iterations. This tool is built entirely in the [Julia](https://julialang.org) language.
+This package is built on [MAGEMin](https://github.com/ComputationalThermodynamics/MAGEMin), a Gibbs energy minimization tool. 
+
+Calculation of the liquidus temperature, i.e. the temperature at which the solid fraction is \approx 0, is performed using Newton-Raphson iterations and the algorithm is built entirely in the [Julia](https://julialang.org) language.
 
 ## Installation
 
-First, install Julia on your system following the official [Julia download instructions](https://julialang.org/downloads/) for your system. Upon successful installation of Julia, execute the following steps to install and use ZircSat:
+First, install Julia following the official [Julia download instructions](https://julialang.org/downloads/) for your system. Upon successful installation of Julia, execute the following steps to install and use ZircSat:
 
 1. Open a terminal and clone this repository to any destination on your machine
 
