@@ -8,7 +8,7 @@ Calculate the liquidus temperature and estimate the Zircon saturation temperatur
 
 This package is built on [MAGEMin](https://github.com/ComputationalThermodynamics/MAGEMin), a Gibbs energy minimization tool. 
 
-Calculation of the liquidus temperature, i.e. the temperature at which the solid fraction is \approx 0, is performed using Newton-Raphson iterations and the algorithm is built entirely in the [Julia](https://julialang.org) language.
+Calculation of the liquidus temperature, i.e. the temperature at which the solid fraction is $\approx$ 0, is performed using Newton-Raphson iterations and the algorithm is built entirely in the [Julia](https://julialang.org) language.
 
 ## Installation
 
