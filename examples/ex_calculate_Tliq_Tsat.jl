@@ -6,7 +6,7 @@ sys_in    = "wt"                                                                
 delim     = ','                                                                         # Delimiter of your data file
 header    = true                                                                        # Does your data file have a header? - It needs one!
 write_csv = true                                                                        # Write output into a new CSV file
-T_0       = 1090.0                                                                      # Initial guess for Newton-Raphson. The closer T_0 to T_liq the faster the convergence
+T_0       = 800.0                                                                      # Initial guess for Newton-Raphson. The closer T_0 to T_liq the faster the convergence
 
 # Run
 T_liq = calculate_liquidus_temperature(; T_0, data_path, db, sys_in, delim, header)
