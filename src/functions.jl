@@ -24,18 +24,19 @@ function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::S
 
     # Solver opts
     liq_f_max  = 100.0                                  # Melt fraction at liquidus [%]
-    max_iter   = 10_000                                 # Maximum no. Newton-Raphson iteration [ ]
-    ϵ_tol      = 1e-1                                   # Absolute error tolerance [ ]
-    α          = 0.01                                    # Relaxation factor [ ]
+    max_iter   = 100                                 # Maximum no. Newton-Raphson iteration [ ]
+    ϵ_tol      = 1e-2                                   # Absolute error tolerance [ ]
+    α          = 0.7                                    # Relaxation factor [ ]
     iters      = 0                                      # Iteration counter
 
     # Loop through data
     for iData in eachindex(df[:,1])
         
         # Load variables, reset, and start MAGEMin
-        P    = df[iData, 1    ]                                    # Pressure [kbar]
-        X   .= [df[iData, iOx] for iOx in Xoxides] # delta = 0
-        T    = copy(T_0)
+        P     = df[iData, 1    ]                                    # Pressure [kbar]
+        X    .= [df[iData, iOx] for iOx in Xoxides] # delta = 0
+        T     = copy(T_0)
+        T_old = 100.0
 
         # Monitor
         println("----------------")
@@ -46,7 +47,7 @@ function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::S
         # Determine liquidus temperature
         err = 1.0; iters = 0
         for iters in 1:max_iter
-                    
+
             # Determine melt fraction at current T
             if isnothing(idFe2O3)   # Check if FeO is total iron
                 out = single_point_minimization(P, T, data, X=X, Xoxides=Xoxides, sys_in=sys_in, B=0.0)
@@ -102,11 +103,17 @@ function calculate_liquidus_temperature(; T_0::Float64, data_path::String, db::S
             err_pert   = abs(liq_f_max - liq_f_pert)
 
             # Update T according to Newton-Raphson method
+            T_old  = T
             dErrdT = (err - err_pert) / (T - T_p)
             T     -= α * err / dErrdT
 
-            if iters % 100 == 0
-                println("Iteration $(iters):    err = $err; T = $T; liq_f = $liq_f")
+            if iters % 10 == 0
+                println("Iteration $(iters):    err = $err; T = $T; T_old = $T_old liq_f = $liq_f")
+            end
+
+            # Stop calculating if the temperature value does not significantly change anymore
+            if abs(T - T_old) < ϵ_tol
+                break
             end
         end
 
