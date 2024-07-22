@@ -80,6 +80,23 @@ First, install Julia following the official [Julia download instructions](https:
 
 The `calculate_liquidus_temperature()` function expects a data table stored as `.csv` file. It is best practice to provide a comma delimited file. This table should contain the test pressure in kbar as well as the major oxides `SiO2-Al2O3-CaO-MgO-FeO-TiO2-K2O-Na2O-Cr2O3-H2O` which are required by MAGEMins igneous database. Note that `FeO` here is total iron. If only `Fe2O3` is availbale this value can be converted as `FeO  = Fe2O3 / 1.1111`, if both are given the conversion is `FeO  = FeO + ( Fe2O3 / 1.1111)`. For now only the igneous database has been tested. While the ordering of the columns does not matter, the package is case sensitive. It is therefore recommended to use the [ZircSat_test_MarxerUlmer2019.csv](https://github.com/lcandiot/ZircSat.jl/tree/main/data/ZircSat_test_MarxerUlmer2019.csv) as a template. Further, the Zirconium concentration in units ppm is required as `Zr` column in the data file.
 
+It is possible to include the effect of buffers in MAGEMin calculations as
+
+```
+julia> data = Initialize_MAGEMin("ig", buffer="nno", verbose=false);
+julia> n = 10
+julia> P = fill(10.0,n)
+julia> T = fill(1100.0,n)
+julia> B = fill(2.0,n)
+julia> Xoxides = ["SiO2"; "Al2O3"; "CaO"; "MgO"; "FeO"; "O"; "K2O"; "Na2O"; "TiO2"; "Cr2O3"; "H2O"];
+julia> X = [48.43; 15.19; 11.57; 10.13; 6.65; 64.0; 0.59; 1.87; 0.68; 0.0; 3.0];
+julia> sys_in = "wt"
+julia> out = multi_point_minimization(P, T, data, X=X, B=B, Xoxides=Xoxides, sys_in=sys_in)
+julia> Finalize_MAGEMin(data)
+```
+
+In this case, it is recommended to give `O` instead of `Fe2O3` as an input oxide and oversaturate by setting `O` $\approx$ 4 mol-% ensuring that the buffer is always activated. If the buffer is activated, it will be listed in MAGEMin's output structure as a stable phase with 0.0 % abundance.
+
 Upon calculation of the liquidus temperature, a new `.csv` file will be written to the same location as the input file. The new file contains the original data plus three additional columns for calculated liquidus temperature, `T_liq [C]`, Zircon saturation temperature, `T_sat [C]`, and the difference between these two temperatures, `T_diff [C]`. Although the precision of this prediction is $\approx$ 1 °C for the test cases, the accuracy of the predicted liquidus temperature is dependent on the accuracy of MAGEMin predicting the stable mineral phases correctly, which is in turn constrained by the underlying igenous database.
 
 ## Working with this repository
